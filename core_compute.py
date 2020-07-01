@@ -5,8 +5,9 @@ import os
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from emcee import PTSampler
-from pymultinest.solve import solve
+from ptemcee import Sampler as PTSampler
+from multiprocessing import Pool
+#from pymultinest.solve import solve
 
 
 def coef_summary(flattrace, pname, outname):
@@ -184,6 +185,17 @@ def gelman_diagnostic(trace, pname):
     return Rhat
 
 
+def likelihood(param, D, feval, dist = 'norm'):
+    '''
+    Other distribution types:
+        laplace
+        
+    '''
+    dA = D['At'] - feval(param, D['Tt'], D)
+    #Obtain hyperparameters for the zT data: this might be for scaling?
+    prob = ss.norm.logpdf(dA, loc=0, scale = param[-1]).sum() 
+    return prob
+
 def posterior(param, D):
     likelihood = D['likelihood']
     return likelihood(param, D) + prior(param, D)
@@ -192,16 +204,16 @@ def posterior(param, D):
 def sampler_emcee(D):
     # nlinks: number of iterations for each walker
     # please specify as even
-    D['nlinks'] = 100
+    D['nlinks'] = 100 #500
 
     # nwalkers: number of interacting chains
-    D['nwalkers'] = 200
+    D['nwalkers'] = 20 #200
 
     # ntemps:
-    D['ntemps'] = 5
+    D['ntemps'] = 2 #5
 
     # ntune: number of initialization steps to discard
-    D['ntune'] = 500
+    D['ntune'] = 5 #100
 
     st = time.time()
 
@@ -238,13 +250,74 @@ def sampler_emcee(D):
 
     st = time.time()
 
-    D['lnZ'], D['dlnZ'] = sampler.thermodynamic_integration_log_evidence()
+    D['lnZ'], D['dlnZ'] = sampler.log_evidence_estimate()
 
     elaps = np.round(time.time()-st, 2)
     msg = "model evidence evaluation: " + str(elaps) + " seconds"
     WP(msg, D['wrt_file'])
 
     return D
+
+def sampler_multip_emcee(D, sampler_dict = {'nlinks' : 300, 'nwalkers' :100, 'ntemps' : 1, 'ntune' : 100}):
+    # nlinks: number of iterations for each walker
+    # please specify as even
+    D['nlinks'] = sampler_dict['nlinks'] #500
+
+    # nwalkers: number of interacting chains
+    D['nwalkers'] = sampler_dict['nwalkers'] #200
+
+    # ntemps:
+    D['ntemps'] = sampler_dict['ntemps'] #5
+
+    # ntune: number of initialization steps to discard
+    D['ntune'] = sampler_dict['ntune'] #100
+
+    st = time.time()
+
+    # identify starting positions for chains
+    tmp = start_pos(D['ntemps']*D['nwalkers'], D)
+    pos0 = tmp.reshape((D['ntemps'], D['nwalkers'], D['dim']))
+
+    likelihood = D['likelihood']
+
+    # run MCMC for the model of interest using multiprocessing
+    with Pool() as pool:
+        sampler = PTSampler(ntemps=D['ntemps'], nwalkers=D['nwalkers'],
+                            dim=len(D['pname']), pool = pool,
+                            logl=likelihood, logp=prior,
+                            loglargs=(D,),
+                            logpargs=(D,))
+    
+        for pos, lnprob, lnlike in sampler.sample(pos0, iterations=D['ntune']):
+            pass
+        burntrace = sampler.chain
+        sampler.reset()
+    
+        print(burntrace.shape)
+        print("burnin completed")
+    
+        for pos, lnprob, lnlike in sampler.sample(pos, iterations=D['nlinks']):
+            pass
+        finaltrace = sampler.chain
+        print(finaltrace.shape)
+    
+        D['rawtrace'] = np.concatenate((burntrace[0, ...], finaltrace[0, ...]),
+                                       axis=1)
+    
+        D['sampling_time'] = np.round(time.time()-st, 2)
+        end = time.time()
+        multi_time = end - st
+        print("Multiprocessing took {0:.1f} seconds".format(multi_time))
+    
+        st = time.time()
+    
+        D['lnZ'], D['dlnZ'] = sampler.log_evidence_estimate()
+
+    elaps = np.round(time.time()-st, 2)
+    msg = "model evidence evaluation: " + str(elaps) + " seconds"
+    WP(msg, D['wrt_file'])
+
+    return D    
 
 
 def sampler_kombine(D):
@@ -253,10 +326,10 @@ def sampler_kombine(D):
 
     # nlinks: number of iterations for each walker
     # please specify as even
-    D['nlinks'] = 50
+    D['nlinks'] = 100
 
     # nwalkers: number of interacting chains
-    D['nwalkers'] = 400
+    D['nwalkers'] = 50
 
     # identify starting positions for chains
     pos = start_pos(D['nwalkers'], D)
@@ -351,6 +424,10 @@ def prior(param, D):
             prior_sum += ss.norm.logpdf(param[ii],
                                         loc=D['locV'][ii],
                                         scale=D['scaleV'][ii])
+        elif D['distV'][ii] == 'lognorm':
+            prior_sum += ss.lognorm.logpdf(param[ii], s = D['s'][ii],
+                                        loc = D['locV'][ii],
+                                        scale = D['scaleV'][ii])
         elif D['distV'][ii] == 'expon':
             prior_sum += ss.expon.logpdf(param[ii])
         elif D['distV'][ii] == 'triang':
@@ -408,6 +485,10 @@ def start_pos(size, D):
                                         size=size)
         elif D['distV'][ii] == 'norm':
             pos[:, ii] = ss.norm.rvs(loc=D['locV'][ii],
+                                     scale=D['scaleV'][ii],
+                                     size=size)
+        elif D['distV'][ii] == 'lognorm':
+            pos[:, ii] = ss.lognorm.rvs(s = D['s'][ii], loc=D['locV'][ii],
                                      scale=D['scaleV'][ii],
                                      size=size)
         elif D['distV'][ii] == 'expon':

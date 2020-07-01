@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('tkagg')
+#matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -35,6 +35,7 @@ def plot_chains(rawtrace, flattrace, nlinks, pname, pname_plt, pltname=None):
         plt.ylabel(r'$%s$' % pname_plt[ii], fontsize=15)
 
         plt.tight_layout()
+        plt.show()
 
         if pltname is not None:
             plt.savefig(pltname + "_chain" + pname[ii] + ".png")
@@ -121,6 +122,7 @@ def plot_cov(flattrace, pname_plt, sciform=False, param_true=None,
 
     if tight_layout:
         plt.tight_layout()
+    plt.show()
 
     if pltname is not None:
         plt.savefig(pltname + "_cov.png")
@@ -144,7 +146,7 @@ def plot_hist(flattrace, pname, pname_plt, param_true=None, pltname=None):
         plt.ylabel("relative frequency")
 
         plt.tight_layout()
-
+        plt.show()
         if pltname is not None:
             plt.savefig(pltname + "_hist_" + pname[ii] + ".png")
             plt.close()
@@ -200,7 +202,7 @@ def plot_percent_dev(flattrace, feval, D,
 
 def plot_prediction(flattrace, name_list, Tt, At, It, feval, D,
                     yerr=None, colorL=None,
-                    param_true=None, CI=95,
+                    param_true=None, CI=95, step = 20,
                     xlim=None, ylim=None, pltname=None,
                     xlabel='x', ylabel='y',
                     legend_loc='lower right', Tplt=None,
@@ -237,15 +239,16 @@ def plot_prediction(flattrace, name_list, Tt, At, It, feval, D,
         xPlb, xPub = xlim
 
     if Tplt is None:
-        nplt = 500
+        nplt = 50
         Tplt = np.linspace(xPlb, xPub, nplt)
 
-    skip = 1
-    nlinks_pos = len(flattrace[::skip, :])
+    step = 20
+    nlinks_pos = len(flattrace[::step, :])
     Aclean = np.zeros((nplt, nlinks_pos))
-    for ii in range(nplt):
-        means = feval(flattrace[::skip], Tplt[ii], D)
-        Aclean[ii, :] = means
+    for ii in range(nlinks_pos):
+        for iii in range(nplt):
+            means = feval(flattrace[ii], Tplt[iii], D)
+            Aclean[iii, ii] = means
 
     low, high = np.percentile(Aclean,
                               [0.5*(100-CI), 100-0.5*(100-CI)],
@@ -273,13 +276,13 @@ def plot_prediction(flattrace, name_list, Tt, At, It, feval, D,
 
     plt.ylim(yPlb, yPub)
 
-    plt.legend(loc=legend_loc, shadow=False,
+    plt.legend(shadow=False,
                fontsize=12, ncol=ncol, fancybox=False)
     plt.xlabel(xlabel, fontsize='large')
     plt.ylabel(ylabel, fontsize='large')
     plt.tick_params(axis='both', labelsize='large')
 
-    plt.tight_layout()
+    plt.show()
 
     if pltname is not None:
         plt.savefig(pltname + "_pred.png")
@@ -435,13 +438,13 @@ def plot_squiggles(rawtrace, p1, p2, pname_plt, pltname=None):
         plt.plot(rawtrace[jj, 0, p1], rawtrace[jj, 0, p2],
                  'ro')
         plt.plot(rawtrace[jj, :, p1], rawtrace[jj, :, p2],
-                 'k-', lw=.5, alpha=.15)
+                 'k-', lw=.5, alpha=.50)
 
     plt.xlabel(r'$%s$' % pname_plt[p1], fontsize=15)
     plt.ylabel(r'$%s$' % pname_plt[p2], fontsize=15)
 
     plt.tight_layout()
-
+    plt.show()
     if pltname is not None:
         plt.savefig(pltname + "_chain2d.png")
         plt.close()
