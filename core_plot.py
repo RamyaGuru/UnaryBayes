@@ -246,9 +246,9 @@ def plot_prediction(flattrace, name_list, Tt, At, It, feval, D,
     nlinks_pos = len(flattrace[::step, :])
     Aclean = np.zeros((nplt, nlinks_pos))
     for ii in range(nlinks_pos):
-        for iii in range(nplt):
-            means = feval(flattrace[ii], Tplt[iii], D)
-            Aclean[iii, ii] = means
+#        for iii in range(nplt):
+        means = feval(flattrace[ii], Tplt, D)
+        Aclean[:, ii] = means
 
     low, high = np.percentile(Aclean,
                               [0.5*(100-CI), 100-0.5*(100-CI)],

@@ -258,7 +258,9 @@ def sampler_emcee(D):
 
     return D
 
-def sampler_multip_emcee(D, sampler_dict = {'nlinks' : 300, 'nwalkers' :100, 'ntemps' : 1, 'ntune' : 100}):
+    
+
+def sampler_multip_emcee(D, sampler_dict = {'nlinks' : 300, 'nwalkers' :50, 'ntemps' : 10, 'ntune' : 100}):
     # nlinks: number of iterations for each walker
     # please specify as even
     D['nlinks'] = sampler_dict['nlinks'] #500
