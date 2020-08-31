@@ -15,18 +15,20 @@ def coef_summary(flattrace, pname, outname):
     headings = ['parameter', '2.5%ile', '16%ile', '50%ile', '84%ile',
                 '97.5%ile', 'Avg.', 'Std. Dev.']
 
-    lvl = np.percentile(flattrace, [2.5, 16, 50, 84, 97.5], axis=0)
+    lvl = np.percentile(flattrace, [1, 2.5, 16, 50, 84, 97.5, 99], axis=0)
 
     print(flattrace.shape)
     print(lvl.shape)
 
     S = {}
     S['parameter'] = pname
-    S['2.5%ile'] = lvl[0, :]
-    S['16%ile'] = lvl[1, :]
-    S['50%ile'] = lvl[2, :]
-    S['84%ile'] = lvl[3, :]
-    S['97.5%ile'] = lvl[4, :]
+    S['1%ile'] = lvl[0, :]
+    S['2.5%ile'] = lvl[1, :]
+    S['16%ile'] = lvl[2, :]
+    S['50%ile'] = lvl[3, :]
+    S['84%ile'] = lvl[4, :]
+    S['97.5%ile'] = lvl[5, :]
+    S['99%ile'] = lvl[6,:]
     S['Avg.'] = np.mean(flattrace, 0)
     S['Std. Dev.'] = np.std(flattrace, 0)
 

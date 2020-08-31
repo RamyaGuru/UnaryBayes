@@ -5,7 +5,7 @@ import seaborn as sns
 import numpy as np
 from matplotlib.ticker import FormatStrFormatter
 from scipy.integrate import cumtrapz
-
+import pickle
 
 def plot_chains(rawtrace, flattrace, nlinks, pname, pname_plt, pltname=None):
 
@@ -257,9 +257,10 @@ def plot_prediction(flattrace, name_list, Tt, At, It, feval, D,
     plt.fill_between(Tplt, low, high,
                      alpha=0.3, facecolor='b',
                      label='%s%% CI' % CI)
-
-    plt.plot(Tplt, np.squeeze(feval(np.mean(flattrace, 0), Tplt, D)),
-             c='b', label='prediction')
+    
+    prediction = np.squeeze(feval(np.mean(flattrace, 0), Tplt, D))
+    plt.plot(Tplt, prediction,
+             c='k', label='prediction', linewidth = 1)
 
     if param_true is not None:
         plt.plot(Tplt, feval(param_true, Tplt, D),
@@ -278,15 +279,19 @@ def plot_prediction(flattrace, name_list, Tt, At, It, feval, D,
 
     plt.legend(shadow=False,
                fontsize=12, ncol=ncol, fancybox=False)
-    plt.xlabel(xlabel, fontsize='large')
-    plt.ylabel(ylabel, fontsize='large')
+    plt.xlabel(xlabel, fontsize=16)
+    plt.ylabel(ylabel, fontsize=16)
     plt.tick_params(axis='both', labelsize='large')
 
     plt.show()
 
     if pltname is not None:
-        plt.savefig(pltname + "_pred.png")
+        plt.savefig(pltname + "_pred.pdf", bbox_inches = 'tight')
         plt.close()
+        error_plt_dict = {'high': high,
+                          'low' : low,
+                          'prediction' : prediction}
+        pickle.dump(error_plt_dict, pltname + '_pred.pkl')
 
 
 def plot_prediction_all(flattrace, name_list, Tt, At, It,
